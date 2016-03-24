@@ -1,0 +1,15 @@
+#!/usr/bin/perl
+@countries=("dk","pe","es");
+$zonedir="/root/iptables/zones";
+
+system ("/sbin/ipset create AllowCNT hash:net");
+system ("/sbin/ipset flush AllowCNT");
+
+foreach (@countries) {
+        open FILE, $zonedir."/".$_.".zone";
+        while (<FILE>) {
+                system ("/sbin/ipset add AllowCNT ".$_);
+        }
+        close FILE;
+}
+

@@ -1,0 +1,3 @@
+rm -rf /root/iptables/zones/*
+wget -O - http://www.ipdeny.com/ipblocks/data/countries/all-zones.tar.gz | tar -zxv -C /root/iptables/zones
+

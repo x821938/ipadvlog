@@ -1,0 +1,53 @@
+#!/usr/bin/perl
+# Takes piped input from iptables logfile
+
+$zonedir="/root/iptables/zones";
+
+# Make a patricia object to hold all ip subnets
+use Net::Patricia;
+$pt = new Net::Patricia;
+
+# Get list of zone directory
+opendir DIR,$zonedir;
+my @dir = readdir(DIR);
+close DIR;
+
+# Traverse each filename
+print "loading Zonefiles...\n";
+foreach(@dir){
+        # If its a zone file then get it
+        if ($_ =~ /.zone/) {
+                $filename=$_;
+                ($zonename)=($filename =~ /(\w+).zone/);
+
+                open FILE, $zonedir."/".$filename;
+                # Traverse each subnet of the zone file and add it to the patricia tree
+                while (<FILE>) {
+                        $pt->add_string($_, $zonename);
+                }
+                close FILE;
+        }
+}
+printf ("Done!\n\n");
+
+# Traverse the piped input
+while (<STDIN>) {
+        #Fish out all interestion fields via reguar expressions
+        ($src)=($_ =~ /SRC=([0-9.]+)/);
+        ($dst)=($_ =~ /DST=([0-9.]+)/);
+        ($spt)=($_ =~ /SPT=(\w+)/);
+        ($dpt)=($_ =~ /DPT=(\w+)/);
+        ($proto)=($_ =~ /PROTO=(\w+)/);
+        ($len)=($_ =~ /LEN=(\w+)/);
+        ($reason)=($_ =~ /iptables_(\w+)_drop/);
+        ($flag)=($_ =~ /\s(SYN|ACK)\s/);
+        ($time)=($_ =~ /(.+)asterisk/);
+
+        #lookup country of source and destination ip from patricia tree
+        $scnt= $pt->match_string($src);
+        $dcnt= $pt->match_string($dst);
+
+        printf ("%15s   %-9s %-4s   %-20s %6s    ->    %-20s %6s     (%s,%s)\n", $time, $reason, $proto, $src."(".$scnt.")", $spt, $dst."(".$dcnt.")", $dpt, $len, $flag);
+}
+
+undef $pt;
